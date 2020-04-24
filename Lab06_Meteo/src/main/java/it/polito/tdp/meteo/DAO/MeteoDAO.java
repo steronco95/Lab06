@@ -5,6 +5,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,13 +18,13 @@ public class MeteoDAO {
 	
 	
 	private Map<String, Citta> citta;
-
+	List<Rilevamento> rilevamenti = new ArrayList<Rilevamento>();
 
 	public List<Rilevamento> getAllRilevamenti() {
 
 		final String sql = "SELECT Localita, Data, Umidita FROM situazione ORDER BY data ASC";
 
-		List<Rilevamento> rilevamenti = new ArrayList<Rilevamento>();
+		
 
 		try {
 			Connection conn = ConnectDB.getConnection();
@@ -58,7 +59,7 @@ public class MeteoDAO {
 		
 		final String sql = "SELECT Localita, DATA, Umidita FROM situazione WHERE Localita = ? AND DATA >=? AND DATA <=?";
 		
-		List<Rilevamento> rilevamenti = new ArrayList<>();
+		List<Rilevamento> ril = new ArrayList<>();
 		
 		try {
 			Connection conn = ConnectDB.getConnection();
@@ -74,12 +75,12 @@ public class MeteoDAO {
 			
 			while(rs.next()) {
 				Rilevamento r = new Rilevamento(rs.getString("Localita"), rs.getDate("Data"), rs.getInt("Umidita"));
-				rilevamenti.add(r);
+				ril.add(r);
 				
 				
 			}
 			
-			c.setRilevamenti(rilevamenti);
+			c.setRilevamenti(ril);
 			
 			conn.close();
 		
@@ -89,13 +90,27 @@ public class MeteoDAO {
 			throw new RuntimeException(e);
 		}
 
-		return rilevamenti;
+		return ril;
 	}
 
 
 	public void setCitta(Map<String, Citta> citta) {
 		this.citta = citta;
 		
+	}
+
+
+	public List<Rilevamento> getListaCitta(Date inizio, Date fine) {
+		
+		List<Rilevamento> r = new ArrayList<>();
+		
+		for(Rilevamento ri : rilevamenti) {
+			if(ri.getData().compareTo(inizio)>=0 && ri.getData().compareTo(fine) <=0 ) {
+				r.add(ri);
+			}
+		}
+		
+		return r;
 	}
 
 

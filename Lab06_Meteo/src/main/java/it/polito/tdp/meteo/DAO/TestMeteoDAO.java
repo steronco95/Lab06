@@ -1,5 +1,7 @@
 package it.polito.tdp.meteo.DAO;
 
+
+import java.util.Date;
 import java.util.List;
 
 import it.polito.tdp.meteo.model.Rilevamento;
@@ -27,6 +29,7 @@ public class TestMeteoDAO {
 //		System.out.println(dao.getAvgRilevamentiLocalitaMese(5, "Torino"));
 		
 
+		
 	}
 
 }
