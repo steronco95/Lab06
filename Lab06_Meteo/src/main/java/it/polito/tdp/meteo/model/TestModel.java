@@ -1,6 +1,7 @@
 package it.polito.tdp.meteo.model;
 
 import java.util.Date;
+import java.util.List;
 
 import it.polito.tdp.meteo.DAO.MeteoDAO;
 
@@ -17,13 +18,35 @@ public class TestModel {
 		
 		
 		try {
-			System.out.println(m.trovaSequenza(6));
+			for(Rilevamento r : m.trovaSequenza(5))
+			System.out.println(r);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-
+		System.out.println(m.bestCosto());
+		
+//		try {
+//			StringBuffer result = new StringBuffer();
+//		for(Rilevamento r : m.trovaSequenza1(5)) {
+//			result.append(r+ "\n");
+//			System.out.println(result.toString());
+//		}
+//		
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		System.out.println("\n////////////////////////////////////\n");
+		
+		StringBuffer result = new StringBuffer();
+		for(Rilevamento r : m.getRilevamenti()) {
+			result.append(r+ "\n");
+			
+		}
+		System.out.println(result.toString());
 	}
 
 }
