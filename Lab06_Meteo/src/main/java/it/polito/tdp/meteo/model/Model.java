@@ -17,160 +17,166 @@ public class Model {
 	private final static int NUMERO_GIORNI_CITTA_CONSECUTIVI_MIN = 3;
 	private final static int NUMERO_GIORNI_CITTA_MAX = 6;
 	private final static int NUMERO_GIORNI_TOTALI = 15;
-	private Map<String,Citta> citta = new HashMap<>();
-	private MeteoDAO meteo = new MeteoDAO();
-	private List<Rilevamento> rilevamenti;
-	private ArrayList<Rilevamento> bestSoluzione;
-	private int bestCosto;
-	
+	private List<Citta> citta;
+	private List<Citta> bestSoluzione; //schema dati in cui inserisco la soluzione migliore trovata con la proc ricorsiva
+	private double bestCosto;
 	
 	public Model() {
-
+		MeteoDAO m = new MeteoDAO();
 		
-	}
-
-	public List<Rilevamento> getRilevamenti(){
-		return rilevamenti;
+		this.citta = m.getAllCitta();
+		
 	}
 	
-	// of course you can change the String output with what you think works best
-	public String getUmiditaMedia(int mese) {
+	public double getCosto() {
+		return bestCosto;
+	}
+	
+	public List<Citta> getAllCitta(){
 		
-		citta.put("genova",new Citta("genova"));
-		citta.put("torino",new Citta("torino"));
-		citta.put("milano",new Citta("milano"));
 		
-		meteo.setCitta(citta);
 		
-		for(Citta c : citta.values()) {
-			meteo.getAllRilevamentiLocalitaMese(mese, c.getNome());
-		}
-		
-		StringBuffer result = new StringBuffer();
-		
-		for(Citta c : citta.values()) {
-			result.append(c.getNome()).append(": ").append(c.getMedia()+ "\n");
-		}
-		
-		return result.toString();
+		return citta;
 	}
 	
 	// of course you can change the String output with what you think works best
-	public List<Rilevamento> trovaSequenza(int mese) throws Exception {
+	public Double getUmiditaMedia(int mese, Citta c) {
+		
+		MeteoDAO m = new MeteoDAO();
+			
+		
+		return m.getUmiditaMedia(mese, c);
+	}
 	
-		int genova = 0;
-		int milano = 0;
-		int torino = 0;
+	// of course you can change the String output with what you think works best
+	public List<Citta> trovaSequenza(int mese) {
+	
+		//creo lista per soluzione parziale
+		List<Citta>  parziale = new ArrayList<>();
 		
-		LocalDate in = LocalDate.of(2013, mese, 01);
-		LocalDate fi = LocalDate.of(2013, mese, 15);
+		MeteoDAO m = new MeteoDAO();
 		
-		Date inizio = java.sql.Date.valueOf(in);
-		Date fine = java.sql.Date.valueOf(fi);
-				
-		rilevamenti = meteo.getListaCitta(inizio, fine);
-		
-		for(Rilevamento ri : rilevamenti) {
-			if(ri.getLocalita().equals("Genova")) {
-				genova ++;
-			}else if(ri.getLocalita().equals("Torino")) {
-				torino++;
-			}else if(ri.getLocalita().equals("Milano")) {
-				milano ++;
-			}
+		for(Citta c : citta) {
+			m.getAllRilevamentiLocalitaMese(mese, c);
 		}
 		
-		if(genova ==0 || torino ==0|| milano ==0) {
-			throw new Exception ("non sono state visitate tutte le citta");
-		}
+		//INIZIALIZZO PROCEDURA RICORSIVA
 		
-		bestCosto = this.calcolaCosto(rilevamenti);
-		
-		List<Rilevamento> parziale = new ArrayList<>();
-//		bestSoluzione = new ArrayList<>(rilevamenti);
-		cerca(parziale,0,rilevamenti);
-		
+		cerca(parziale,0);
 		
 		return bestSoluzione;
 	}
-	
-	
-	private void cerca(List<Rilevamento> parziale, int livello, List<Rilevamento> disponibili) {
+
+	private void cerca(List<Citta> parziale, int livello) {
 		
-		//controllo il costo con il bestCosto
-//		bestCosto = this.calcolaCosto(parziale);
-//		if(this.calcolaCosto(parziale) > bestCosto) {
-//			return;
-//		}
-		
-		int costo = this.calcolaCosto(parziale);
-		if(costo > bestCosto) {
-			return;
-		}
-		
-		
-		
-		
-		
-		//arrivo alla fine dell'albero ricorsivo
-		if(disponibili.size() == 0) {
-			if(costo <= bestCosto) 
-				
-				
+		//CASO TERMINALE
+		if(livello == this.NUMERO_GIORNI_TOTALI) {
+			//calcolo il costo della soluzione parziale
+			double costo = this.calcolaCosto(parziale);
+			//se non ho ancora trovato una soluzione aggiungo questa trovata alla soluzione parziale
+			//se invece ho gia trovato una soluzione verifico che la nuova soluzione abbia un costo minore di quella precedentemente trovata
 			
-			bestCosto = this.calcolaCosto(parziale);
-			
-			bestSoluzione = new ArrayList<>(parziale);
-			return;
+			if(bestSoluzione == null || costo < this.calcolaCosto(bestSoluzione)) {
+				bestCosto = costo;
+				bestSoluzione = new ArrayList<>(parziale);
+			}
 			
 		}
 		
-		for(Rilevamento r : disponibili) {
-			parziale.add(r);
-			List<Rilevamento> temp = new ArrayList<>(disponibili);
-			temp.remove(r);
-			cerca(parziale,livello+1,temp);
-			
+		
+		
+		
+		//CASO NORMALE
+		
+		//itero sulle citta presenti nel database
+		for(Citta c : citta) {
+			if(aggiuntaValida(c,parziale)) {
+				parziale.add(c);
+				cerca(parziale,livello+1);
+				parziale.remove(parziale.size()-1);
+			}
 		}
-		
-//		parziale.add(rilevamenti.get(livello));
-//		cerca(parziale, livello+1);
-//		parziale.remove(rilevamenti.get(livello));
-//		
-//		cerca(parziale,livello+1);
-		
-		
-		
 		
 	}
 
-
-
-	private int calcolaCosto(List<Rilevamento> parziale) {
+	/**
+	 * calcolo il costo totale della soluzione parziale, sommando tutte le umidita e aggiungendo 100 ogni volta che cambio citta
+	 * @param parziale soluzione parziale passata come parametro dalla funzione ricorsiva
+	 * @return costo totale della soluzione
+	 */
+	private double calcolaCosto(List<Citta> parziale) {
 		
-		int costo =0;
+		double costo = 0.0;
 		
-		for(Rilevamento r : parziale) {
-			costo += r.getUmidita(); 
+		//sommo tutte le umidita trovate nei primi 15 giorni 
+		
+		for(int gg =1; gg<this.NUMERO_GIORNI_TOTALI; gg++) {
+			//prendo la citta dalla soluzione parziale
+			Citta c = parziale.get(gg-1);
+			//seleziono dalla lista dei rilevamenti di quella citta il rilevamento del giorno selezionato e ne prendo l'umidita trovata
+			double umid = c.getRilevamenti().get(gg-1).getUmidita();
+			//sommo l'umidita alla variabile di costo totale;
+			costo += umid;
 		}
-
-		for(int i =0; i<parziale.size(); i++) {
-			for(int j=i+1; j<parziale.size(); j++) {
-				if(!parziale.get(i).equals(parziale.get(j))) {
-					costo += 100;
-					break;
-				}
+		
+		//aggiungo 100 al costo totale ogni volta che cambio citta nei primi 15 giorni
+		
+		for(int gg =1; gg<this.NUMERO_GIORNI_TOTALI; gg++) {
+			if(!parziale.get(gg-1).equals(parziale.get(gg))) {
+				costo+=100;
 			}
 		}
 		
 		return costo;
 	}
 
-	public int bestCosto() {
+	private boolean aggiuntaValida(Citta c, List<Citta> parziale) {
+	
+		int count = 0;
 		
-		return bestCosto;
+		for(Citta cit : parziale) {
+			if(c.equals(cit)) {
+			count++;
+		}
 	}
-
+		//controllo che la citta (count) non compaia piu di 6 volte nella soluzione
+		
+		if(count >= this.NUMERO_GIORNI_CITTA_MAX) {
+//			se si verifica questa condizione non aggiungo la citta alla soluzione parziale nella proc ricorsiva
+			return false;
+		}
+		
+		//verifico che il tecnico stia almeno per 3 giorni CONSECUTIVI nella stessa citta
+		if(parziale.size() == 0) {
+			// non ho inserito ancora alcuna citta perciò posso tranquillamente inserirla;
+			return true;
+		}
+		
+		if(parziale.size() == 1 || parziale.size() == 2){
+			//sono al secondo o terzo giorno quindi sono obbligato a inserire la stessa citta poichè non posso cambiarla
+			return parziale.get(parziale.size()-1).equals(c);
+		}
+		
+		//se ho passato i controlli precedenti posso tranquillamente rimanere nella stessa citta
+		if(parziale.get(parziale.size()-1).equals(c)) {
+		//controllo se l'ultima citta inserita e uguale a quella che voglio inserire posso tranquillamente inserirla nuovamente
+			return true;
+		}
+		
+		//se la citta passata come parametro e diversa dall'ultima citta inserita 
+		//allora verifico che nei precedenti tre giorni sono rimasto nella stessa citta
+		
+		if(parziale.get(parziale.size()-1).equals(parziale.get(parziale.size()-2)) 
+				&& parziale.get(parziale.size()-2).equals(parziale.get(parziale.size()-3)) ) {
+			return true;
+		}
+		
+		
+		return false;
+	}
+	
+	
+	
 	
 
 

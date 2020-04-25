@@ -17,11 +17,13 @@ public class MeteoDAO {
 	
 	
 	
-	private Map<String, Citta> citta;
-	private List<Rilevamento> rilevamenti = new ArrayList<Rilevamento>();
+	
+	
 
 	public List<Rilevamento> getAllRilevamenti() {
 
+		List<Rilevamento> rilevamenti = new ArrayList<Rilevamento>();
+		
 		final String sql = "SELECT Localita, Data, Umidita FROM situazione ORDER BY data ASC";
 
 		
@@ -47,84 +49,26 @@ public class MeteoDAO {
 			throw new RuntimeException(e);
 		}
 	}
-
 	
-	public List<Rilevamento> getAllRilevamentiLocalitaMese(int mese, String localita) {
+	public Double getUmiditaMedia(int mese, Citta c) {
 		
-//		Date inizio = new Date(2013,mese,01);
-//		Date fine = new Date(2013,mese,31);
-		String inizio = "2013-" + mese + "-01";
-		String fine = "2013-" + mese + "-31";
-		Citta c = citta.get(localita);
+		final String sql = "SELECT AVG(Umidita) AS U FROM situazione  WHERE localita=? AND MONTH(DATA)=? ";
+
 		
-		final String sql = "SELECT Localita, DATA, Umidita FROM situazione WHERE Localita = ? AND DATA >=? AND DATA <=?";
-		
-		List<Rilevamento> ril = new ArrayList<>();
-		
+
 		try {
 			Connection conn = ConnectDB.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
 
-			st.setString(1, localita);
-			st.setString(2, inizio);
-			st.setString(3, fine);
-//			st.setDate(2, inizio);
-//			st.setDate(3, fine);
+			st.setString(1, c.getNome());
+			st.setInt(2, mese);
 			
 			ResultSet rs = st.executeQuery();
-			
-			while(rs.next()) {
-				Rilevamento r = new Rilevamento(rs.getString("Localita"), rs.getDate("Data"), rs.getInt("Umidita"));
-				ril.add(r);
-				
-				
-			}
-			
-			c.setRilevamenti(ril);
-			
-			conn.close();
-		
-		}catch (SQLException e) {
 
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
+			rs.next();
+			double ris = rs.getDouble("U");
 
-		return ril;
-	}
-
-
-	public void setCitta(Map<String, Citta> citta) {
-		this.citta = citta;
-		
-	}
-
-	public List<Rilevamento> getRilevamenti(){
-		return rilevamenti;
-	}
-	
-	
-	public List<Rilevamento> getListaCitta(Date inizio, Date fine) {
-		
-		List<Rilevamento> ril = new ArrayList<>();
-		
-		final String sql = "SELECT Localita, DATA, Umidita	FROM situazione	WHERE  DATA >= ? AND DATA <= ? ORDER BY DATA asc";
-
-		try {
-			Connection conn = ConnectDB.getConnection();
-			PreparedStatement st = conn.prepareStatement(sql);
-			st.setDate(1, inizio);
-			st.setDate(2, fine);
-			ResultSet rs = st.executeQuery();
-
-			while (rs.next()) {
-
-				Rilevamento r = new Rilevamento(rs.getString("Localita"), rs.getDate("Data"), rs.getInt("Umidita"));
-				ril.add(r);
-			}
-
-			conn.close();
-			
+			return ris;
 
 		} catch (SQLException e) {
 
@@ -132,9 +76,86 @@ public class MeteoDAO {
 			throw new RuntimeException(e);
 		}
 		
-		return ril;
 		
 	}
+	
+	public List<Citta> getAllCitta() {
+		
+		List<Citta> citta = new ArrayList<>();
+		
+		final String sql = "SELECT distinct Localita FROM situazione ";
+
+		
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+
+				Citta c = new Citta(rs.getString("Localita"));
+				citta.add(c);
+			}
+
+			conn.close();
+			return citta;
+
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+
+	
+	public List<Rilevamento> getAllRilevamentiLocalitaMese(int mese, Citta c) {
+
+		List<Rilevamento> ril = new ArrayList<>();
+		
+		final String sql = "SELECT localita, DATA, umidita FROM situazione WHERE localita =? AND MONTH(DATA) =?";
+
+		
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+
+			st.setString(1, c.getNome());
+			st.setInt(2, mese);
+			
+			
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+
+				Rilevamento r = new Rilevamento(rs.getString("Localita"), rs.getDate("Data"), rs.getInt("Umidita"));
+				ril.add(r);
+				
+			}
+
+			conn.close();
+			
+			c.setRilevamenti(ril);
+			
+			return ril;
+
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		
+		
+	
+		
+	}
+	
+	
+
+
+	
 
 
 }
